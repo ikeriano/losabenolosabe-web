@@ -29,9 +29,9 @@ function pinta(html, onClick) {
 }
 var COMUN = { menu: abreLat, volver: volver, perfil: function () { ir(yo ? 'perfil' : 'crear'); }, notif: function () { ir('notif'); }, compartir: function () { aviso('Compartir no está disponible en esta versión sin conexión 🙂'); }, tienda: function () { ir('tienda'); } };
 // ---------- menú lateral (sliding menu) ----------
-var MEN = [['jugar', 'JUGAR', 'ic_thumbs_up_white'], ['ranking', 'Ranking', 'ic_ranking'], ['programas', 'Programas', 'ic_programs'], ['notif', 'Notificaciones', 'ic_notification_menu'], ['tienda', 'Super Poderes', 'ic_power_sliding'], ['molona', 'Pregunta Molona', 'ic_cool_question'], ['ajustes', 'Ajustes', 'ic_settings'], ['guia', 'Guía del juego', 'ic_game_guide']];
+var MEN = [['jugar', 'JUGAR', 'ic_thumbs_up_white'], ['ranking', 'Ranking', 'ic_ranking'], ['programas', 'Programas', 'ic_programs'], ['notif', 'Notificaciones', 'ic_notification_menu'], ['tienda', 'Super Poderes', 'ic_power_sliding'], ['molona', 'Pregunta Molona', 'ic_cool_question'], ['ajustes', 'Ajustes', 'ic_settings'], ['guia', 'Guía del juego', 'ic_game_guide'], ['about', 'About', 'ic_about']];
 function abreLat() {
-  var h = '<div class="yo"><img src="' + avatar(yo && yo.av) + '"><div><b>' + esc(yo ? yo.nick : 'Invitado') + '</b><br><small style="color:#a09e9e">' + puntos + ' PUNTOS · ' + poderes + ' SUPERPODERES</small></div></div>';
+  var h = '<div style="text-align:center;padding:10px 0 4px;background:#1b1b1b"><img src="' + img('logo_lsnls_side') + '" style="max-width:70%"></div><div class="yo"><img src="' + avatar(yo && yo.av) + '"><div><b>' + esc(yo ? yo.nick : 'Invitado') + '</b><br><small style="color:#a09e9e">' + puntos + ' PUNTOS · ' + poderes + ' SUPERPODERES</small></div></div>';
   for (var i = 0; i < MEN.length; i++) h += '<div class="it" data-m="' + MEN[i][0] + '"><img src="' + img(MEN[i][2]) + '">' + MEN[i][1] + '</div>';
   lat.innerHTML = h; lat.className = 'on'; var its = lat.querySelectorAll('[data-m]');
   for (var j = 0; j < its.length; j++) its[j].onclick = function () { snd('arpa'); var m = this.getAttribute('data-m'); cierraLat(); pila = []; ir(m === 'jugar' ? 'pregunta' : m, null, true); actual.raiz = true; pila = [{ n: 'main' }]; };
@@ -221,6 +221,13 @@ PANT.ajustes = function () {
     '<div class="r"><span>Superpoderes Actuales: ' + poderes + '</span></div><div class="r"><span>Max. preguntas pendientes: 5</span></div><h4>TIENDA</h4><div class="r" data-a="tienda"><span>COMPRAR SUPERPODERES</span><img src="' + img('ic_list_next') + '"></div>' +
     '<div class="r" data-a="borra"><span>RECUPERAR PERFIL · empezar de cero</span><img src="' + img('ic_list_next') + '"></div><div class="r" data-a="guia"><span>Guía del juego</span><img src="' + img('ic_list_next') + '"></div></div>', function (a, v) {
       if (a === 'sw') { aj[v] = !aj[v]; guarda('ajustes', aj); PANT.ajustes(); } else if (a === 'borra') { if (confirm('¿Borrar perfil y puntos?')) { yo = null; puntos = 0; poderes = 10; pend = []; guarda('perfil', null); guarda('puntos', 0); guarda('poderes', 10); guarda('pend', []); pila = []; ir('main', null, true); } } else ir(a);
+    });
+};
+PANT.about = function () {
+  function b(a, t, k) { return '<div class="r" data-a="' + a + '" style="background:#2e2e2e;margin:' + (k ? '0' : '0') + ';border-bottom:1px solid #1b1b1b"><span>' + t + '</span><img src="' + img('btn_about_arrow') + '"></div>'; }
+  pinta(cabVolver('About', 'ic_about') + '<div class="cuerpo ajs" style="text-align:center"><img src="' + img('logo_lsnls') + '" style="width:55%;max-width:240px;margin:14px auto 6px;display:block"><img src="' + img('logo_quadram') + '" style="max-width:60%;margin:6px auto;display:block"><div style="color:#a09e9e;font-size:13px;margin:8px 0">Aplicación desarrollada y diseñada<br>por QUADRAM</div><div style="color:#a09e9e;font-size:13px;margin-bottom:14px">www.quadramqs.com</div>' +
+    b('valora', 'Valorar Aplicación') + b('molona', 'Enviar Feedback') + b('guia', 'Soporte') + '<div style="color:#a09e9e;font-size:12px;margin-top:14px">Version 1.1 · copia privada de Iker</div></div>', function (a) {
+      if (a === 'valora') aviso('¡Gracias! Esta copia es solo tuya, así que tu valoración ya cuenta: ⭐⭐⭐⭐⭐'); else ir(a);
     });
 };
 window.__lsnClasico = { ir: ir, estado: function () { return { yo: yo, puntos: puntos, J: J }; } };
