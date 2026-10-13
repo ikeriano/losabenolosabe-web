@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Lo Sabe, No Lo Sabe · App clásica</title><link rel="stylesheet" href="clasico.css"></head>
+<body><div id="tel"><div id="app"></div><div id="lateral"></div><div id="aviso"></div></div>
+<script>
+(function(){function m(t){var d=document.getElementById('errores');if(!d){d=document.createElement('div');d.id='errores';d.onclick=function(){d.parentNode.removeChild(d)};document.body.appendChild(d)}d.appendChild(document.createTextNode('\u26a0 '+t+'\n'))}
+window.onerror=function(msg,src,l){m(msg+(src?' @ '+String(src).split('/').pop()+':'+l:''))};window.__muestraError=m})();
+</script>
+<script src="datos.js"></script><script src="clasico.js"></script></body></html>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#d21301">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="app-version" content="1.0">
+<link rel="icon" href="icon-192.png"><title>Lo Sabe, No Lo Sabe</title>
+  
+  <script>
+/* WebView antiguo (Android 4.x) sin ES2017/WebGL: abre directamente la App clásica 2D (ES5) */
+(function(){var ok=true;try{new Function('async()=>{let a={...{}};return a?.b??1}');var c=document.createElement('canvas');ok=!!(window.WebGLRenderingContext&&(c.getContext('webgl')||c.getContext('experimental-webgl')))}catch(e){ok=false}if(!ok)location.replace('clasico/index.html')})();
+</script>
+<link rel="stylesheet" href="assets/app.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="c3d"></canvas>
+  <div id="touch"></div>
+  <div id="stage2d"><div id="stageBox"></div></div>
+  <div id="panel"><div id="panelBox"></div></div>
+  <div id="hud">
+    <div id="joy"><div id="joyKnob"></div></div>
+    <div id="vidas" class="ui"></div>
+    <div id="hashtag"></div>
+    <div id="bubble" class="hidden"><b>El Presentador</b><span></span></div>
+    <div id="lower3" class="hidden"></div>
+    <div id="credits" class="hidden"><div id="creditsRoll"></div></div>
+    <div id="toast" class="hidden"></div>
+    <div id="topbar" class="ui">
+      <button id="btnMenu" title="Menú">☰</button>
+      <button id="btnCam" title="Cámara">👁</button>
+      <button id="btnLuces" title="Luces">💡</button>
+      <button id="btnSkip" class="hidden">Saltar ⏭</button>
+    </div>
+    <div id="hint" class="hidden"></div>
+    <div id="actions" class="ui"></div>
+  </div>
+  <div id="menu"></div>
+  <div id="loading"><div class="spin"></div><p>Cargando el plató…</p></div>
+  <div id="rotate">Gira el móvil 📱↻</div>
+  <input id="kb" type="text" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="Escribe las letras">
+</div>
+<script src="js/app.js"></script>
+</body>
+</html>
