@@ -226,7 +226,7 @@
         T.textos = grupos.length ? grupos : lim.length ? [lim.join(' ').slice(0, 60)] : [];
       }
       // audio: golpes (picos de energía) para sincronizar cortes, luces y efectos
-      let golpes = [], audio = false;
+      let golpes = [], audio = file.size >= 120e6;
       try {
         onProg && onProg({ f: 0.94, txt: 'Analizando la música y el sonido…' });
         if (file.size < 120e6) {
@@ -236,9 +236,9 @@
           for (let i = 0; i + hop < ch.length; i += hop) { let e = 0; for (let j = 0; j < hop; j += 4) e += ch[i + j] * ch[i + j]; env.push(Math.sqrt(e / (hop / 4))); }
           const mean = env.reduce((a, b) => a + b, 0) / env.length; let ult = -1;
           for (let i = 12; i < env.length; i++) { let loc = 0; for (let j = i - 12; j < i; j++) loc += env[j]; loc /= 12; if (env[i] > loc * 1.7 && env[i] > mean * 1.1 && i - ult > 12) { golpes.push(+(i * 0.02).toFixed(2)); ult = i; } }
-          audio = mean > 0.002; ctx.close && ctx.close();
+          let pico = 0; for (const x of env) if (x > pico) pico = x; audio = mean > 0.002 && pico > 0.01; ctx.close && ctx.close();
         }
-      } catch (e) { console.warn('[MC3D] audio', e); audio = true; }
+      } catch (e) { console.warn('[MC3D] audio (sin pista de sonido)', e); audio = false; }
       const guion = { v: 2, nombre: file.name || 'vídeo', desc, dur, hashtag: hashtagV, w: v.videoWidth, h: v.videoHeight, tomas, golpes, audio, fecha: Date.now(), seg: Math.round((performance.now() - t0) / 1000) };
       await borrar();
       if (file.size < 200e6) await tx('meta', 'readwrite', st => st.put(file, 'video')); else guion.audio = false;
@@ -276,20 +276,23 @@
     const tag = (String(desc != null ? desc : guion.desc || '').match(/#[\wÁÉÍÓÚÑáéíóúñ]+/) || [])[0];
     const espec = [['nochebuena', 'nochebuena'], ['navidad', 'navidad'], ['nochevieja', 'findeano'], ['fin de ano', 'findeano'], ['halloween', 'halloween'], ['verano', 'verano'], ['carnaval', 'carnaval'], ['prime time', 'primetime'], ['primetime', 'primetime'], ['ninos', 'ninos'], ['infantil', 'ninos']].find(([k]) => s.includes(k));
     const look = p.estilo === 'oscuro' ? 'morado' : p.colores.length ? (/#(ff|c0|a0|9a)/i.test(p.colores[0]) && /a040ff|9a3aff|c08aff|ff4fb0|ff2ad0/.test(p.colores.join()) ? 'morado' : /2f6bff|1ae0ff|1ae0d0|7ac8ff/.test(p.colores.join()) ? 'cian' : /ffffff|c8d0e0/.test(p.colores.join()) ? 'blanco' : null) : null;
-    return { dur: guion.dur / p.vel, vel: p.vel, tomas, banners, golpes: (guion.golpes || []).map(x => x / p.vel), hashtag: tag || (espec && CFG.hashtag ? CFG.hashtag(espec[1]) : null) || guion.hashtag || (CFG.hashtag ? CFG.hashtag(null) : null) || ('#' + String(CFG.nombre).replace(/[^\wÁÉÍÓÚÑáéíóúñ]/g, '') + (espec ? espec[1][0].toUpperCase() + espec[1].slice(1) : '')), especial: espec && espec[1], efectos: p.efectos, look, mudo: p.mudo || !guion.audio, colores: p.colores, p };
+    return { dur: guion.dur / p.vel, vel: p.vel, tomas, banners, golpes: (guion.golpes || []).map(x => x / p.vel), hashtag: tag || (espec && CFG.hashtag ? CFG.hashtag(espec[1]) : null) || guion.hashtag || (CFG.hashtag ? CFG.hashtag(null) : null) || CFG.hashtagDef || ('#' + String(CFG.nombre).replace(/[^\wÁÉÍÓÚÑáéíóúñ]/g, '') + (espec ? espec[1][0].toUpperCase() + espec[1].slice(1) : '')), especial: espec && espec[1], efectos: p.efectos, look, mudo: p.mudo || !guion.audio, sinPista: !p.mudo && !guion.audio, colores: p.colores, p };
   }
   async function reproducir(opc = {}) {
     const guion = await getMeta(); if (!guion || guion.v !== 2) return false;
     if (!CFG.recrear) { alert('Este juego todavía no tiene plató para recrear la cabecera.'); return false; }
     const pl = plan(guion, opc.desc);
-    const vid = pl.mudo ? null : await getBlob('video'); const audio = vid ? URL.createObjectURL(vid) : null;
-    document.body.dataset.mc3d = '1'; try { await CFG.recrear(pl, { audio, ctx: opc.ctx || null, preview: !!opc.preview }); } finally { delete document.body.dataset.mc3d; if (audio) setTimeout(() => URL.revokeObjectURL(audio), 1000); }
+    const vid = pl.mudo ? null : await getBlob('video'); let audio = vid ? URL.createObjectURL(vid) : null, propio = !!audio;
+    // vídeo sin pista de audio o en silencio: suena la sintonía del propio juego
+    if (!audio && pl.sinPista && CFG.sintonia) { try { let u = typeof CFG.sintonia === 'function' ? await CFG.sintonia() : CFG.sintonia; if (u instanceof Blob) { u = URL.createObjectURL(u); propio = true; } if (u) { audio = u; pl.sintonia = true; } } catch (e) { console.warn('[MC3D] sintonía', e); } }
+    PISTA_SINT = !!pl.sintonia; document.body.dataset.mc3d = '1'; try { await CFG.recrear(pl, { audio, sintonia: !!pl.sintonia, sintoniaJuego: (!audio && pl.sinPista && CFG.sintoniaJuego) ? CFG.sintoniaJuego : null, ctx: opc.ctx || null, preview: !!opc.preview }); } finally { delete document.body.dataset.mc3d; if (audio && propio) setTimeout(() => URL.revokeObjectURL(audio), 1000); }
     return true;
   }
   /** reproductor de audio sincronizado para los adaptadores de cada juego */
+  let PISTA_SINT = false;
   function pista(url, vel) {
     const t0 = performance.now(); let a = null;
-    if (url) { a = new Audio(url); a.playbackRate = vel || 1; a.preservesPitch = false; a.play().catch(() => { a = null; }); }
+    if (url) { a = new Audio(url); a.playbackRate = vel || 1; a.preservesPitch = false; a.loop = !!PISTA_SINT; a.play().catch(() => { a = null; }); }
     return { t: () => a && !a.paused && !a.ended && a.currentTime > 0 ? a.currentTime / (vel || 1) : (performance.now() - t0) / 1000, parar: () => { try { a && a.pause(); } catch (e) { } }, el: () => a };
   }
   // ------------------------------------------------------------------ interfaz (Opciones › Mi cabecera 3D)
@@ -393,7 +396,7 @@
   function recrearGenerico(env) {
     return async function (pl, op) {
       const T3 = env.THREE, V = (a) => new T3.Vector3(a[0], a[1], a[2]), C = V(env.centro || [0, 1.5, 0]), R = env.radio || 9, H = env.altura || 3.5;
-      const st = document.createElement('style'); st.textContent = '.mc3dG{position:fixed;inset:0;z-index:2147481000;pointer-events:none;font-family:system-ui,Arial}.mc3dG .h{position:absolute;left:2%;top:3%;font:900 clamp(16px,2.6vw,30px) system-ui,Arial;color:#fff;text-shadow:0 2px 8px #000a}'
+      const st = document.createElement('style'); st.textContent = '#hashtag,#bubble,.exHashBug,#topbar [id*=hash],#topbar [class*=hash],#hud [class*=hash]{visibility:hidden!important}.mc3dG{position:fixed;inset:0;z-index:2147481000;pointer-events:none;font-family:system-ui,Arial}.mc3dG .h{position:absolute;left:2%;top:3%;font:900 clamp(16px,2.6vw,30px) system-ui,Arial;color:#fff;text-shadow:0 2px 8px #000a}'
         + '.mc3dG .lt{position:absolute;left:3%;bottom:7%;display:flex;align-items:center;gap:8px;background:linear-gradient(#2f8bff,#0b4fd0);border:2px solid #8fd0ff;border-radius:999px;padding:6px 16px 6px 8px;font:800 clamp(13px,2vw,22px) system-ui,Arial;color:#fff;box-shadow:0 4px 18px #0008;transform:translateX(-130%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2)}'
         + '.mc3dG .lt i{width:1.4em;height:1.4em;border-radius:50%;background:#ffd23a}.mc3dG .lt.on{transform:none}.mc3dG button{position:absolute;right:2%;bottom:3%;pointer-events:auto;font:800 15px system-ui;padding:9px 16px;border-radius:20px;border:2px solid #ffc21a;background:#000a;color:#fff}';
       const ov = document.createElement('div'); ov.className = 'mc3dG'; ov.innerHTML = '<div class="h"></div><div class="lt"><i></i><span></span></div><button>Saltar ⏭</button>';
@@ -402,11 +405,12 @@
       const cam = env.camera, pos = new T3.Vector3(), mira = new T3.Vector3();
       const sujeto = (t, k) => { const dir = t.dir || 1, a0 = (k * 1.37) % (Math.PI * 2), at = (a, r, h) => C.clone().add(new T3.Vector3(Math.sin(a) * r, h - C.y, Math.cos(a) * r));
         const L = (f, x) => { const l = f && f(); return l && l.length ? l : x; };
-        if (t.sujeto === 'concursantes') { const cs = L(env.concursantes, null); if (cs) { const p = V(cs[(k * 3) % cs.length]); const out = p.clone().sub(C).setY(0).normalize(); const lado = new T3.Vector3(-out.z, 0, out.x).multiplyScalar(1.6 * dir); const h = new T3.Vector3(0, 1.5, 0);
-          return [p.clone().addScaledVector(out, 3.2).add(lado).add(h), p.clone().add(new T3.Vector3(0, 1.3, 0)), p.clone().addScaledVector(out, 2.4).sub(lado).add(h), p.clone().add(new T3.Vector3(0, 1.3, 0))]; } }
+        if (t.sujeto === 'concursantes') { const cs = L(env.concursantes, null); if (cs) { const p = V(cs[(k * 3) % cs.length]); const out = p.clone().sub(C).setY(0).normalize(); const lado = new T3.Vector3(-out.z, 0, out.x).multiplyScalar(1.6 * dir); const h = new T3.Vector3(0, 1.9, 0);
+          return [p.clone().addScaledVector(out, 4.6).add(lado).add(h), p.clone().add(new T3.Vector3(0, 1.3, 0)), p.clone().addScaledVector(out, 3.6).sub(lado).add(h), p.clone().add(new T3.Vector3(0, 1.3, 0))]; } }
         if (t.sujeto === 'presentador' && env.presentador) { const p = V(env.presentador()); const out = p.clone().sub(C).setY(0); if (out.lengthSq() < 0.01) out.set(0, 0, 1); out.normalize(); const lado = new T3.Vector3(-out.z, 0, out.x).multiplyScalar(1.2 * dir), m = p.clone().add(new T3.Vector3(0, 1.5, 0));
           return [m.clone().addScaledVector(out, 3.6).add(lado), m, m.clone().addScaledVector(out, 2.6).sub(lado), m]; }
         if (t.sujeto === 'publico') { const pu = L(env.publico, null); if (pu) { const p = V(pu[k % pu.length]); return [C.clone().lerp(p, 0.3).setY(H * 0.7), p, C.clone().lerp(p, 0.45).setY(H * 0.8).add(new T3.Vector3(dir, 0, 0)), p.clone().add(new T3.Vector3(2 * dir, 0, 0))]; } }
+        if (t.sujeto === 'logo' && env.logoCam) { const a = V(env.logoCam[0]), m = V(env.logoCam[1]); return [a, m, a.clone().lerp(m, 0.18), m]; }
         if (t.sujeto === 'logo' && env.logo) { const p = V(env.logo[0]), m = V(env.logo[1]); const d = p.clone().sub(m).normalize(); return [p.clone().addScaledVector(d, 4).setY(p.y + 0.5), p, p.clone().addScaledVector(d, 6.5).setY(p.y + 0.3), p]; }
         switch (t.mov) {
           case 'acercar': return [at(a0, R * 1.5, H * 1.6), C, at(a0, R * 0.6, H * 0.7), C];
@@ -418,7 +422,7 @@
         }
       };
       // letras del logo que vuelan y se montan
-      const montaLogo = () => { if (!env.logo) return null; const txt = String(env.texto || CFG.titulo || CFG.nombre || '').toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ0-9 ¡!¿?]/g, '').slice(0, 22); const g = new T3.Group(); env.scene.add(g); const p = V(env.logo[0]), m = V(env.logo[1]);
+      const montaLogo = () => { if (!env.logo) return null; const txt = String(env.texto || CFG.titulo || CFG.nombre || '').toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ0-9 ¡!¿?]/g, '').slice(0, 40); const g = new T3.Group(); env.scene.add(g); const p = V(env.logo[0]), m = V(env.logo[1]);
         const dirx = new T3.Vector3().subVectors(m, p).cross(new T3.Vector3(0, 1, 0)).normalize(), L = [], n = txt.length, w = Math.min(0.6, 5.5 / Math.max(1, n));
         [...txt].forEach((ch, i) => { if (ch === ' ') return; const c = document.createElement('canvas'); c.width = 128; c.height = 160; const x = c.getContext('2d'); x.fillStyle = '#ffd23a'; x.strokeStyle = '#7a3b00'; x.lineWidth = 8; x.font = '900 140px Arial'; x.textAlign = 'center'; x.strokeText(ch, 64, 135); x.fillText(ch, 64, 135);
           const tx = new T3.CanvasTexture(c); const me = new T3.Mesh(new T3.PlaneGeometry(w, w * 1.25), new T3.MeshBasicMaterial({ map: tx, transparent: true, side: T3.DoubleSide, depthTest: false })); me.renderOrder = 999;
@@ -429,6 +433,7 @@
       const au = pista(op.audio, pl.vel), now = () => au.t(); const lt = ov.querySelector('.lt');
       let k = -1, cur = null, logo = null, bi = 0, gi = 0, ltT = 0; const bs = pl.banners.slice().sort((a, b) => a.t - b.t);
       try { env.antes && env.antes(pl); } catch (e) { console.warn('[MC3D]', e); }
+      let paraSint = null; try { if (op.sintoniaJuego) paraSint = op.sintoniaJuego(); } catch (e) { console.warn('[MC3D] sintonía', e); }
       env.toma && env.toma();
       try {
         await new Promise(res => { const paso = () => {
@@ -444,7 +449,7 @@
           if (ltT && t >= ltT) { lt.classList.remove('on'); ltT = 0; }
           while (gi < pl.golpes.length && t >= pl.golpes[gi]) { try { env.golpe && env.golpe(gi); } catch (e) { } gi++; }
           requestAnimationFrame(paso); }; requestAnimationFrame(paso); });
-      } finally { au.parar(); if (logo) logo.dispose(); ov.remove(); st.remove(); try { env.suelta && env.suelta(); env.despues && env.despues(); } catch (e) { console.warn('[MC3D]', e); } }
+      } finally { au.parar(); try { typeof paraSint === 'function' && paraSint(); } catch (e) { } if (logo) logo.dispose(); ov.remove(); st.remove(); try { env.suelta && env.suelta(); env.despues && env.despues(); } catch (e) { console.warn('[MC3D]', e); } }
     };
   }
   async function introPrograma(ctx) {
